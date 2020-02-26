@@ -1,0 +1,121 @@
+//this is a Mel script to convert Advanced Skeleton animation from main controller to local controls in order to retain world position when exporting to Unreal as FBX
+//usage select 1 control from your rig and run
+{
+
+
+string $controls[]= {"PoleArm_L", "PoleArm_R", "PoleLeg_L", "PoleLeg_R","RootX_M", "IKArm_L", "IKArm_R", "IKLeg_L", "IKLeg_R"};
+//this is the last array index where a pole vector is found
+int $lastPV=3;
+//this is the name of the master
+string $master = "Main";
+string $sel[] = `ls -sl`;
+string $splitter = ":";
+string $buffer[];
+string $controlsRebuiltNames[];
+int $parentType;
+
+
+string $locs[];
+string $constraints[];
+
+float $minTime = `playbackOptions -q -minTime`;
+float $maxTime = `playbackOptions -q -maxTime`;
+
+int $namespace = 1;
+
+tokenize $sel[0] $splitter $buffer;
+//print $buffer;
+
+
+//find namespace
+if (size($buffer)<2)
+    {
+    print "not referenced";
+    $namespace = 0;
+    }
+
+
+
+//string $loc[] = `spaceLocator -p 0 0 0 -n ($buffer[0] + "_" + $master + "_LOC")`;
+//$locs[size($locs)]=$loc[0];
+
+
+//create locators that follows local controls and bake their anim
+for ($each in $controls)
+    {
+    string $loc[] = `spaceLocator -p 0 0 0 -n ($buffer[0] + "_" + $each + "_LOC")`;
+    $locs[size($locs)]=$loc[0];
+    if ($namespace==0)
+        {
+        //$each = $buffer[0] + $splitter + $each;
+        $controlsRebuiltNames[size($controlsRebuiltNames)]=$each;
+        }
+    else
+        {
+        $each = $buffer[0] + $splitter + $each;
+        $controlsRebuiltNames[size($controlsRebuiltNames)]=$each;
+        }
+    string $const[] =`parentConstraint -weight 1 $each $loc[0]`;
+    $constraints[size($constraints)]=$const[0];
+    }
+
+//clear viewport visibility
+string $panels[] = `getPanel -type modelPanel`;
+select -cl;
+
+
+
+for ($each in $panels)
+{
+isolateSelect -state 1 $each;
+}
+
+
+
+bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $locs;
+clear $constraints;
+
+
+//constrain local controls to locators (point constraint if polevector, parent constraint if other)
+for( $i=0 ; $i < size($controlsRebuiltNames); ++$i)
+    {
+    if ($i <= $lastPV)
+        {
+        string $const[] =`pointConstraint -weight 1 $locs[$i] $controlsRebuiltNames[$i]`;
+        $constraints[size($constraints)]=$const[0];
+        }
+    else
+        {
+        string $const[] =`parentConstraint -weight 1 $locs[$i] $controlsRebuiltNames[$i]`;
+        $constraints[size($constraints)]=$const[0]; 
+        }
+    }
+
+currentTime $minTime;
+
+string $masterSel = `select -r ($buffer[0] + ":" + $master)`;
+setAttr ($masterSel + ".translateX") 0;
+setAttr ($masterSel + ".translateY") 0;
+setAttr ($masterSel + ".translateZ") 0;
+setAttr ($masterSel +  ".rotateX") 0;
+setAttr ($masterSel +  ".rotateY") 0;
+setAttr ($masterSel +  ".rotateZ") 0;
+
+setKeyframe -breakdown 0 -hierarchy none -controlPoints 0 -shape 0 {($buffer[0] + ":" + $master)};
+cutKey -clear;
+
+bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $controlsRebuiltNames;
+delete $constraints $locs;
+
+//select -cl;
+for ($each in $panels)
+    {
+    isolateSelect -state 0 $each;
+    }
+
+print "Your animation converted has been. Go on you can!";
+//IK/ FK switch
+//space switch
+}
+
+
