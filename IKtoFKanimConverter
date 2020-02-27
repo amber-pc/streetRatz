@@ -1,0 +1,25 @@
+# Wip - It does not work yet
+
+import maya.cmds as cmds
+
+selected = cmds.ls(sl=True,long=True) or []
+rightSideSuffix = "_R"
+leftSideSuffix = "_L"
+result = eachSel.endswith(leftSideSuffix)
+
+controlNames = "pSphere2", "pSphere1"
+
+min_time = cmds.playbackOptions(q=True, min=True)
+max_time = cmds.playbackOptions(q=True, max=True)
+
+for index, eachSel in enumerate(controlNames):
+    #print(eachSel)
+    eachSel = eachSel + leftSideSuffix
+    newLoc = cmds.spaceLocator()
+    newCon = cmds.parentConstraint(eachSel, newLoc, mo = 0)
+    
+    cmds.bakeResults( newLoc, time=(min_time, max_time), at=["tx", "ty", "tz", "rx","ry","rz"], sb=1 )   
+    cmds.delete(newCon)
+    print (result) 
+    
+#add keep unbaked?
