@@ -1,0 +1,5 @@
+import maya.cmds as cmds
+selected = cmds.ls(sl=True,long=True) or []
+
+for eachSel in selected:
+    cmds.setAttr (eachSel + '.drawStyle', 0);
