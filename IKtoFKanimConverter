@@ -2,24 +2,216 @@
 
 import maya.cmds as cmds
 
-selected = cmds.ls(sl=True,long=True) or []
-rightSideSuffix = "_R"
-leftSideSuffix = "_L"
-result = eachSel.endswith(leftSideSuffix)
+#selected = cmds.ls(sl=True,long=True) or []
+armSknJnts = ["Shoulder", "Elbow", "Wrist"]
+legSknJnts = ["Hip", "Knee", "Ankle"]
+allJoints = armSknJnts + legSknJnts
 
-controlNames = "pSphere2", "pSphere1"
+armFKctrls = ["FKShoulder", "FKElbow", "FKWrist"]
+armIKctrls = ["PoleArm", "IKArm"]
+legFKctrls = ["FKHip", "FKKnee", "FKAnkle"]
+legIKctrls = ["IKLeg", "PoleLeg"]
 
-min_time = cmds.playbackOptions(q=True, min=True)
-max_time = cmds.playbackOptions(q=True, max=True)
+lSideToken = "_L"
+rSideToken = "_R"
+kToken = ["FK", "IK"]
+nsSplitter = ":"
 
-for index, eachSel in enumerate(controlNames):
-    #print(eachSel)
-    eachSel = eachSel + leftSideSuffix
-    newLoc = cmds.spaceLocator()
-    newCon = cmds.parentConstraint(eachSel, newLoc, mo = 0)
+nSpace = nsS(0)
+side = sideCheck(nsS(2))
+kinematicsType = kFkCheck(nsS(2))
+
+actualCtrls =[]
+actaulJnts=[]
+#strip side Token from user selection
+selNoside = (nsS(2)).replace((sideCheck(nsS(2))), '')
+
+#FKctrls
+devMode = 1;
+#find name space
+#nameSpace = cmds.namespaceInfo( currentNamespace=True )
+
+
+#strip namespace and returns object if index is 2 and namespace if 1
+def nsS(index):
+    object = cmds.ls(sl=1)[0].rpartition(':')[index]
+    return object
+
+
+#Check limb side (R or L). This is for advanced skeleton: it assume side is indicated at end of name. Given a string Returns TRUE if it finds Right side _R suffix
+def sideCheck(name):
+    if name.endswith(rSideToken) == 1:
+        sideN = rSideToken
+    else:
+        sideN = lSideToken
+    return sideN
+
     
-    cmds.bakeResults( newLoc, time=(min_time, max_time), at=["tx", "ty", "tz", "rx","ry","rz"], sb=1 )   
-    cmds.delete(newCon)
-    print (result) 
+#check if selection is FK or IK, returns true if FK
+def kFkCheck(name):
+    if name.startswith(kToken[0]) == 1:
+        k = kToken[0]
+        return 0
+    else:
+        k = kToken[1]
+        return 1
+
+
+#check if arm or leg. Returns true if Arm
+def limbCheck(name):
+    return (name in (armFKctrls + armIKctrls))
+
+
+#rebuild full object name
+def rebuildName(name):
+    #side = sideCheck(nsS(2))
+    fullName = nSpace + nsSplitter + name + side
+    return fullName
+
+
+#lists all controls from involved kinematic (w/out side token)
+def pickControlsK(kinematicsT):
+    if kinematicsT == 0:
+        controls = (armFKctrls + legFKctrls)
+    else:
+        controls = (armIKctrls + legIKctrls)
+    return controls
+
+#lists all controls from correct limb and correct kinematics
+def pickControlsL(limb):
+    from collections import Counter
+    if limbCheck(limb) == 1:
+        actualControls = list((Counter(pickControlsK(kinematicsType)) - Counter(legFKctrls + legIKctrls)).elements())
+        return actualControls
+    else:
+        actualControls = list((Counter(pickControlsK(kinematicsType)) - Counter(armFKctrls + armIKctrls)).elements())
+        return actualControls
+        
+#lists all joints from correct limb
+def pickJointsL(limb, jntList):
+    from collections import Counter
+    if limbCheck(limb) == 1:
+        actualJoints = list((Counter(jntList) - Counter(legSknJnts)).elements())
+        return actualJoints
+    else:
+        actualJoints = list((Counter(jntList) - Counter(armSknJnts)).elements())
+        return actualJoints
+       
+#given selected control without side token, lists actual controls
+for index, each in enumerate(pickControlsL(selNoside)):    
+    each = rebuildName(each)
+    actualCtrls.append(each)
+
+#given joint name without side token, lists actual joint
+def generateJntsNames(jointN):  
+    each = rebuildName(jointN)
+    return each
+
+
+
+locs=[]
+consts=[]
+
+
+
+def buildActualJointList(jointList):
+    #for index, each in enumerate(jointList[kinematicsType:len(jointList)]):    
+    actualJnts=[]
+    for index, each in enumerate(jointList[kinematicsType:len(jointList)]):    
+        each=generateJntsNames(each)
+        actualJnts.append(each)
+    return actualJnts
+
+#print pickJointsL(selNoside, allJoints)
+print buildActualJointList(pickJointsL(selNoside, allJoints)) #list actual joint list appropriate for limb
+
+#print allJoints
+
+#jointIndex:len(armSknJnts)-1
+#for index, each in enumerate(actualJnts): 
+
+#print actualJnts
+
+
+
+if devMode ==0:
+    #side(nsS(2))
+    #selected = cmds.ls(sl=True,long=True) or []
+  
     
+    controlNames = "pSphere2", "pSphere1"
+    
+
+    
+    for index, eachSel in enumerate(controlNames):
+        #print(eachSel)
+        eachSel = eachSel + lSideToken
+        newLoc = cmds.spaceLocator()
+        newCon = cmds.parentConstraint(eachSel, newLoc, mo = 0)
+        
+        cmds.bakeResults( newLoc, time=(min_time, max_time), at=["tx", "ty", "tz", "rx","ry","rz"], sb=1 )   
+        cmds.delete(newCon)
+
+
+
+#cmds.select(actualCtrls)
+
+    #print nSpace #print selected OBJ's namespace
+    #print side #print selected OBJ's side relative to character
+#print kinematicsType #print selected OBJ's kinematic's type (1 is IK)
+
+    #print selNoside #selected OBJ's name without side token
+
+#print pickControlsK(kinematicsType) #lists all controls from involved kinematic (w/out side token)
+
+    #print limbCheck(selNoside) #selected OBJ's limb (1 is ARM)
+    #print pickControlsL(selNoside) #print all controls from correct limb and correct kinematics
+
+
+
+
+#    newLoc = cmds.spaceLocator()
+
+    #newCon = cmds.parentConstraint(each, newLoc, mo = 0)
+    #locs.append(newLoc)
+    #consts.append(newCon)
+
+#min_time = cmds.playbackOptions(q=True, min=True)
+#max_time = cmds.playbackOptions(q=True, max=True)
+#cmds.bakeResults(locs, time=(min_time, max_time), at=["tx", "ty", "tz", "rx","ry","rz"], sb=1 )   
+#cmds.delete(consts)
+    
+    #cmds.bakeResults( newLoc, time=(min_time, max_time), at=["tx", "ty", "tz", "rx","ry","rz"], sb=1 )   
+    #cmds.delete(newCon)
+    
+    
+    
+    
+    #list names    
+    #print side
+    #print nSpace
+    #print nsSplitter
+    #print kinematicsType
+    
+    #for index, each in enumerate(armFKctrls):
+    #    each = rebuildName(each)
+    #    print each
+
+    #sel in (armFKctrls + armIKctrls)
+    #print limbCheck(selNoside)
+    
+    
+    #print pickControlsK(kinematicsType)
+    #print pickControlsL(selNoside)
+    #print "devving"
+    #print nsS(2)
+    #print sideCheck(nsS(2))
+    #print side
+    #print nSpace
+    #print side("asadf_L")
+
 #add keep unbaked?
+#modularise
+#wishlist
+#ask user to list controls and strip them of side, IK indication, and namespace
+#check which kind of constraint is supported (are rotations free?)
