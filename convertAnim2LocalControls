@@ -1,12 +1,13 @@
 //Amedeo Beretta - https://www.linkedin.com/in/amedeoberetta/
+//Space converter v0.1
 //this is a Mel script to convert Advanced Skeleton animation from main controller to local controls in order to retain world position when exporting to Unreal as FBX
-//usage select 1 control from your rig and run
+//usage: select 1 control from your rig and run
 //
 
 {
 
 
-string $controls[]= {"PoleArm_L", "PoleArm_R", "PoleLeg_L", "PoleLeg_R","FKHead_M", "RootX_M", "IKArm_L", "IKArm_R", "IKLeg_L", "IKLeg_R"};
+string $controls[]= {"PoleArm_L", "PoleArm_R", "PoleLeg_L", "PoleLeg_R","FKHead_M", "RootX_M", "IKArm_L", "IKArm_R", "IKLeg_L", "IKLeg_R", "FKShoulder_R", "FKShoulder_L"};
 //this is the last array index where a pole vector is found
 int $lastPV=3;
 //this is the last array index where a head is found
@@ -70,13 +71,13 @@ string $panels[] = `getPanel -type modelPanel`;
 select -cl;
 
 
-
+/*
 for ($each in $panels)
 {
 isolateSelect -state 1 $each;
 }
 
-
+*/
 
 bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $locs;
 clear $constraints;
@@ -113,13 +114,12 @@ cutKey -clear;
 bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $controlsRebuiltNames;
 delete $constraints $locs;
 
-//select -cl;
-
+/*
 for ($each in $panels)
     {
     isolateSelect -state 0 $each;
     }
-
+*/
 print "Your animation converted has been. Go on you can!";
 //IK/ FK switch
 //space switch
