@@ -1,4 +1,7 @@
-//Amedeo Beretta - https://www.linkedin.com/in/amedeoberetta/
+//Amedeo Beretta
+//https://www.linkedin.com/in/amedeoberetta/
+//https://www.youtube.com/channel/UCMDRaVXKrhoFiKv1xdH14iA/
+//
 //Space converter v0.2
 //this is a Mel script to convert Advanced Skeleton animation from main controller to local controls in order to retain world position when exporting to Unreal as FBX
 //usage: select 1 control from your rig and run
