@@ -1,10 +1,12 @@
 //Amedeo Beretta - https://www.linkedin.com/in/amedeoberetta/
-//Space converter v0.1
+//Space converter v0.2
 //this is a Mel script to convert Advanced Skeleton animation from main controller to local controls in order to retain world position when exporting to Unreal as FBX
 //usage: select 1 control from your rig and run
 //
-//IF YOU HAVE ANIMATION LAYERS YOU MUST MUTE THEM AFTER CONVERTING THE ANIMATION!!!
-
+//You need to run this once for each rig in the the scene.
+//
+//IF YOU HAVE ANIMATION LAYERS YOU NEED TO MERGE THEM BEFORE RUNNING THISq!!!
+//
 {
 
 
@@ -48,7 +50,7 @@ if (size($buffer)<2)
 //$locs[size($locs)]=$loc[0];
 
 
-//create locators that follows local controls and bake their anim
+//create locators that follow local controls and bake their anim
 for ($each in $controls)
     {
     string $loc[] = `spaceLocator -p 0 0 0 -n ($buffer[0] + "_" + $each + "_LOC")`;
@@ -67,22 +69,37 @@ for ($each in $controls)
     $constraints[size($constraints)]=$const[0];
     }
 
+//Check if controls are constrained and store list of their in scene (non referenced) constrains in $inSceneConstraints.
+//These constraints will be deleted later to allow controls to be constrained to locators (just in case there's an animated constrain on a control).
+string $inSceneConstraints[];
+for ($each in $controlsRebuiltNames)
+    {
+    string $connections[] = `listRelatives -type constraint $each`;    
+        for ($conn in $connections)
+            {
+            if (`referenceQuery -isNodeReferenced $conn` == 0)
+            $inSceneConstraints[size($inSceneConstraints)]=$conn;
+            }
+    }
+
+
 //clear viewport visibility
+
 string $panels[] = `getPanel -type modelPanel`;
 select -cl;
-
-
-/*
 for ($each in $panels)
 {
 isolateSelect -state 1 $each;
 }
 
-*/
 
-bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $locs;
+//Bake controls motion to locators and delete locators constraints
+bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $locs $controlsRebuiltNames;
+delete $constraints;
 clear $constraints;
 
+//now that control motion has been baked, it should be safe to delete any constraint the animator put on this rig in the scene, so we delete them
+delete $inSceneConstraints;
 
 //constrain local controls to locators (point constraint if polevector, parent constraint if other)
 for( $i=0 ; $i < size($controlsRebuiltNames); ++$i)
@@ -99,8 +116,10 @@ for( $i=0 ; $i < size($controlsRebuiltNames); ++$i)
         }
     }
 
+//go back to the beginning of the visible timeline
 currentTime $minTime;
 
+//select master and zero it out, then set a key and remove animation.
 string $masterSel = `select -r ($buffer[0] + ":" + $master)`;
 setAttr ($masterSel + ".translateX") 0;
 setAttr ($masterSel + ".translateY") 0;
@@ -112,16 +131,16 @@ setAttr ($masterSel +  ".rotateZ") 0;
 setKeyframe -breakdown 0 -hierarchy none -controlPoints 0 -shape 0 {($buffer[0] + ":" + $master)};
 cutKey -clear;
 
+//bake control motion so that it follows that of constraints. Than delete constraints and locators.
 bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $controlsRebuiltNames;
 delete $constraints $locs;
 
-/*
+
 for ($each in $panels)
     {
     isolateSelect -state 0 $each;
     }
-*/
+
 print "Your animation converted has been. Go on you can!";
-//IK/ FK switch
-//space switch
+
 }
