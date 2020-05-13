@@ -2,7 +2,7 @@
 //https://www.linkedin.com/in/amedeoberetta/
 //https://www.youtube.com/channel/UCMDRaVXKrhoFiKv1xdH14iA/
 //
-//Space converter v0.2
+//Space converter v0.3
 //this is a Mel script to convert Advanced Skeleton animation from main controller to local controls in order to retain world position when exporting to Unreal as FBX
 //usage: select 1 control from your rig and run
 //
@@ -102,7 +102,10 @@ delete $constraints;
 clear $constraints;
 
 //now that control motion has been baked, it should be safe to delete any constraint the animator put on this rig in the scene, so we delete them
+if (size($inSceneConstraints) >0)
+{
 delete $inSceneConstraints;
+}
 
 //constrain local controls to locators (point constraint if polevector, parent constraint if other)
 for( $i=0 ; $i < size($controlsRebuiltNames); ++$i)
@@ -131,11 +134,13 @@ setAttr ($masterSel +  ".rotateX") 0;
 setAttr ($masterSel +  ".rotateY") 0;
 setAttr ($masterSel +  ".rotateZ") 0;
 
-setKeyframe -breakdown 0 -hierarchy none -controlPoints 0 -shape 0 {($buffer[0] + ":" + $master)};
 cutKey -clear;
+setKeyframe -breakdown 0 -hierarchy none -controlPoints 0 -shape 0 {($buffer[0] + ":" + $master)};
+
 
 //bake control motion so that it follows that of constraints. Than delete constraints and locators.
 bakeResults -simulation true -t ($minTime + ":" + $maxTime) -sampleBy 1 -oversamplingRate 1 -disableImplicitControl true -preserveOutsideKeys true -sparseAnimCurveBake false -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer false -bakeOnOverrideLayer false -minimizeRotation true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $controlsRebuiltNames;
+
 delete $constraints $locs;
 
 
